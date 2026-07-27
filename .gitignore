@@ -43,3 +43,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# real lead data (contains business PII) - MongoDB is the source of truth,
+# not git. Only the synthetic sample-leads.csv fixture is tracked.
+/data/master_prioritized_leads.csv

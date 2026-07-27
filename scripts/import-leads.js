@@ -9,12 +9,14 @@ const path = require("path");
 const { parse } = require("csv-parse/sync");
 const { MongoClient } = require("mongodb");
 
+// lead_id is the upsert key: it's unique and complete in the source data,
+// unlike registration_no which has been observed to collide across distinct
+// businesses in real RERA registry exports.
 const REQUIRED_COLUMNS = [
+  "lead_id",
   "state",
   "name",
   "agent_type",
-  "district",
-  "phone",
   "email",
   "registration_no",
   "priority_score",
@@ -36,6 +38,9 @@ function validateRow(row, rowNumber) {
     if (!row[col]) {
       errors.push(`missing "${col}"`);
     }
+  }
+  if (row.lead_id && Number.isNaN(Number(row.lead_id))) {
+    errors.push(`lead_id "${row.lead_id}" is not a number`);
   }
   if (row.priority_score && Number.isNaN(Number(row.priority_score))) {
     errors.push(`priority_score "${row.priority_score}" is not a number`);
@@ -84,14 +89,15 @@ async function main() {
 
     for (const row of validRows) {
       const result = await leads.updateOne(
-        { registration_no: row.registration_no },
+        { lead_id: Number(row.lead_id) },
         {
           $set: {
+            lead_id: Number(row.lead_id),
             state: row.state,
             name: row.name,
             agent_type: row.agent_type,
-            district: row.district,
-            phone: row.phone,
+            district: row.district || "",
+            phone: row.phone || "",
             email: row.email,
             registration_no: row.registration_no,
             priority_score: Number(row.priority_score),
