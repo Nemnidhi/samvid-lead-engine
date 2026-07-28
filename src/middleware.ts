@@ -17,7 +17,13 @@ export function middleware(request: NextRequest) {
 
   return new NextResponse("Authentication required", {
     status: 401,
-    headers: { "WWW-Authenticate": 'Basic realm="Samvid Lead Engine"' },
+    headers: {
+      "WWW-Authenticate": 'Basic realm="Samvid Lead Engine"',
+      // temporary diagnostic - booleans only, never real values
+      "X-Debug-Has-User": String(!!expectedUser),
+      "X-Debug-Has-Pass": String(!!expectedPass),
+      "X-Debug-Had-Auth-Header": String(!!authHeader),
+    },
   });
 }
 
