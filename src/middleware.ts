@@ -15,14 +15,26 @@ export function middleware(request: NextRequest) {
     }
   }
 
+  let receivedUser = "";
+  let receivedPass = "";
+  if (authHeader?.startsWith("Basic ")) {
+    const decoded = atob(authHeader.slice(6));
+    const separatorIndex = decoded.indexOf(":");
+    receivedUser = decoded.slice(0, separatorIndex);
+    receivedPass = decoded.slice(separatorIndex + 1);
+  }
+
   return new NextResponse("Authentication required", {
     status: 401,
     headers: {
       "WWW-Authenticate": 'Basic realm="Samvid Lead Engine"',
-      // temporary diagnostic - booleans only, never real values
-      "X-Debug-Has-User": String(!!expectedUser),
-      "X-Debug-Has-Pass": String(!!expectedPass),
-      "X-Debug-Had-Auth-Header": String(!!authHeader),
+      // temporary diagnostic - lengths only, never real values
+      "X-Debug-Expected-User-Len": String(expectedUser?.length ?? -1),
+      "X-Debug-Expected-Pass-Len": String(expectedPass?.length ?? -1),
+      "X-Debug-Received-User-Len": String(receivedUser.length),
+      "X-Debug-Received-Pass-Len": String(receivedPass.length),
+      "X-Debug-User-Matches": String(receivedUser === expectedUser),
+      "X-Debug-Pass-Matches": String(receivedPass === expectedPass),
     },
   });
 }
