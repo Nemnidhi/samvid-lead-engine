@@ -20,6 +20,10 @@ const eslintConfig = [
       "next-env.d.ts",
       // standalone CommonJS operational scripts, not app source
       "scripts/**",
+      // shared with those scripts via plain `require()` (no transpiler there),
+      // so these must stay CommonJS even though they live under src/
+      "src/lib/classify.js",
+      "src/lib/generateParagraph.js",
     ],
   },
 ];

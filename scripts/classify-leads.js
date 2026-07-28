@@ -7,7 +7,7 @@
 require("dotenv").config();
 
 const { MongoClient } = require("mongodb");
-const { classify } = require("./lib/classify");
+const { classify } = require("../src/lib/classify");
 
 async function main() {
   const args = process.argv.slice(2);
@@ -56,7 +56,16 @@ async function main() {
         { $set: { lead_id: lead.lead_id, ...result, classified_at: new Date() } },
         { upsert: true }
       );
-      await leads.updateOne({ lead_id: lead.lead_id }, { $set: { status: "classified" } });
+      await leads.updateOne(
+        { lead_id: lead.lead_id },
+        {
+          $set: {
+            status: "classified",
+            classification_category: result.category,
+            classification_confidence: result.confidence,
+          },
+        }
+      );
 
       tally[result.category] += 1;
       processed += 1;

@@ -9,7 +9,7 @@ const fs = require("fs");
 const { MongoClient } = require("mongodb");
 const { renderToFile } = require("@react-pdf/renderer");
 const { buildReportDocument } = require("./lib/reportTemplate");
-const { generateParagraph } = require("./lib/generateParagraph");
+const { generateParagraph } = require("../src/lib/generateParagraph");
 
 async function main() {
   const leadId = parseInt(process.argv[2], 10);
