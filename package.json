@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "import-leads": "node scripts/import-leads.js",
-    "enrich-leads": "node scripts/enrich-leads.js"
+    "enrich-leads": "node scripts/enrich-leads.js",
+    "classify-leads": "node scripts/classify-leads.js"
   },
   "dependencies": {
     "csv-parse": "^7.0.1",
