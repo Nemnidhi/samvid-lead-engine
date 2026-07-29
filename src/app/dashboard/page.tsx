@@ -58,18 +58,35 @@ export default async function Dashboard({
     .toArray();
   const reportedIds = new Set(reportDocs.map((d) => d.lead_id as number));
 
-  const rows: LeadRow[] = docs.map((d) => ({
-    leadId: d.lead_id as number,
-    name: d.name as string,
-    email: (d.email as string) || "",
-    state: (d.state as string) || "",
-    district: (d.district as string) || "",
-    priorityTier: (d.priority_tier as string) || "",
-    status: d.status as string,
-    category: (d.classification_category as string) || undefined,
-    confidence: (d.classification_confidence as string) || undefined,
-    hasReport: reportedIds.has(d.lead_id as number),
-  }));
+  const sendHistory = await db
+    .collection("outreach_log")
+    .aggregate([
+      { $match: { lead_id: { $in: leadIds } } },
+      { $group: { _id: "$lead_id", count: { $sum: 1 }, lastSentAt: { $max: "$sent_at" } } },
+    ])
+    .toArray();
+  const sendHistoryByLeadId = new Map(
+    sendHistory.map((h) => [h._id as number, { count: h.count as number, lastSentAt: h.lastSentAt as Date }])
+  );
+
+  const rows: LeadRow[] = docs.map((d) => {
+    const history = sendHistoryByLeadId.get(d.lead_id as number);
+    return {
+      leadId: d.lead_id as number,
+      name: d.name as string,
+      email: (d.email as string) || "",
+      phone: (d.phone as string) || "",
+      state: (d.state as string) || "",
+      district: (d.district as string) || "",
+      priorityTier: (d.priority_tier as string) || "",
+      status: d.status as string,
+      category: (d.classification_category as string) || undefined,
+      confidence: (d.classification_confidence as string) || undefined,
+      hasReport: reportedIds.has(d.lead_id as number),
+      sendCount: history?.count ?? 0,
+      lastSentAt: history?.lastSentAt ? history.lastSentAt.toISOString() : undefined,
+    };
+  });
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 

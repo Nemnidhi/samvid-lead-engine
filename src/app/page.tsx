@@ -6,9 +6,14 @@ export default function Home() {
           Samvid Lead Engine
         </h1>
         <p className="max-w-md text-zinc-600 dark:text-zinc-400">
-          Phase 1 scaffold is live. Dashboard and pipeline come online in later
-          phases.
+          Internal lead-enrichment and outreach tool.
         </p>
+        <a
+          href="/dashboard"
+          className="mt-2 rounded bg-black px-4 py-2 text-sm font-medium text-white dark:bg-white dark:text-black"
+        >
+          Go to Dashboard
+        </a>
       </main>
     </div>
   );

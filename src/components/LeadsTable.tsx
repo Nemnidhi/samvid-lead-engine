@@ -7,6 +7,7 @@ export type LeadRow = {
   leadId: number;
   name: string;
   email: string;
+  phone: string;
   state: string;
   district: string;
   priorityTier: string;
@@ -14,6 +15,8 @@ export type LeadRow = {
   category?: string;
   confidence?: string;
   hasReport: boolean;
+  sendCount: number;
+  lastSentAt?: string;
 };
 
 const CATEGORY_COLOR: Record<string, string> = {
@@ -22,6 +25,8 @@ const CATEGORY_COLOR: Record<string, string> = {
   C: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300",
   D: "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300",
 };
+
+let errorIdCounter = 0;
 
 async function generateReport(leadId: number) {
   const res = await fetch(`/api/leads/${leadId}/generate-report`, { method: "POST" });
@@ -39,12 +44,30 @@ async function sendReport(leadId: number) {
   }
 }
 
+function formatSentAt(iso?: string) {
+  if (!iso) return null;
+  return new Date(iso).toLocaleString(undefined, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  });
+}
+
 export default function LeadsTable({ leads }: { leads: LeadRow[] }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [busy, setBusy] = useState<Set<number>>(new Set());
   const [bulkStatus, setBulkStatus] = useState<string | null>(null);
+  const [errors, setErrors] = useState<{ id: number; message: string }[]>([]);
+
+  const addError = (message: string) => {
+    const id = errorIdCounter++;
+    setErrors((prev) => [...prev, { id, message }]);
+  };
+
+  const dismissError = (id: number) => {
+    setErrors((prev) => prev.filter((e) => e.id !== id));
+  };
 
   const toggle = (leadId: number) => {
     setSelected((prev) => {
@@ -62,7 +85,7 @@ export default function LeadsTable({ leads }: { leads: LeadRow[] }) {
   const handleGenerateOne = (leadId: number) => {
     setBusy((prev) => new Set(prev).add(leadId));
     generateReport(leadId)
-      .catch((err) => alert(`Failed to generate report for lead ${leadId}: ${err.message}`))
+      .catch((err) => addError(`Failed to generate report for lead ${leadId}: ${err.message}`))
       .finally(() => {
         setBusy((prev) => {
           const next = new Set(prev);
@@ -81,7 +104,7 @@ export default function LeadsTable({ leads }: { leads: LeadRow[] }) {
 
     setBusy((prev) => new Set(prev).add(lead.leadId));
     sendReport(lead.leadId)
-      .catch((err) => alert(`Failed to send to lead ${lead.leadId}: ${err.message}`))
+      .catch((err) => addError(`Failed to send to lead ${lead.leadId}: ${err.message}`))
       .finally(() => {
         setBusy((prev) => {
           const next = new Set(prev);
@@ -100,7 +123,7 @@ export default function LeadsTable({ leads }: { leads: LeadRow[] }) {
       try {
         await generateReport(leadId);
       } catch (err) {
-        console.error(`Failed for lead ${leadId}`, err);
+        addError(`Failed to generate report for lead ${leadId}: ${(err as Error).message}`);
       }
       done += 1;
       setBulkStatus(`Generating ${done} / ${ids.length}...`);
@@ -126,7 +149,7 @@ export default function LeadsTable({ leads }: { leads: LeadRow[] }) {
       try {
         await sendReport(lead.leadId);
       } catch (err) {
-        console.error(`Failed to send to lead ${lead.leadId}`, err);
+        addError(`Failed to send to lead ${lead.leadId}: ${(err as Error).message}`);
         setBulkStatus(`Stopped after ${done} / ${targets.length}: ${(err as Error).message}`);
         break;
       }
@@ -142,6 +165,27 @@ export default function LeadsTable({ leads }: { leads: LeadRow[] }) {
 
   return (
     <div>
+      {errors.length > 0 && (
+        <div className="mb-3 space-y-1">
+          {errors.map((e) => (
+            <div
+              key={e.id}
+              className="flex items-start justify-between gap-3 rounded border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-800 dark:border-red-800 dark:bg-red-950/40 dark:text-red-300"
+            >
+              <span>{e.message}</span>
+              <button
+                type="button"
+                onClick={() => dismissError(e.id)}
+                className="shrink-0 text-red-500 hover:text-red-700 dark:text-red-400"
+                aria-label="Dismiss"
+              >
+                x
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
       <div className="mb-3 flex items-center gap-3">
         <button
           type="button"
@@ -175,10 +219,12 @@ export default function LeadsTable({ leads }: { leads: LeadRow[] }) {
                 />
               </th>
               <th className="px-3 py-2">Name</th>
+              <th className="px-3 py-2">Contact</th>
               <th className="px-3 py-2">Location</th>
               <th className="px-3 py-2">Priority</th>
               <th className="px-3 py-2">Status</th>
               <th className="px-3 py-2">Category</th>
+              <th className="px-3 py-2">Last Sent</th>
               <th className="px-3 py-2">Actions</th>
             </tr>
           </thead>
@@ -194,6 +240,10 @@ export default function LeadsTable({ leads }: { leads: LeadRow[] }) {
                 </td>
                 <td className="px-3 py-2">{lead.name}</td>
                 <td className="px-3 py-2 text-zinc-500">
+                  <div>{lead.email || <span className="text-zinc-400">no email</span>}</div>
+                  {lead.phone && <div className="text-xs">{lead.phone}</div>}
+                </td>
+                <td className="px-3 py-2 text-zinc-500">
                   {[lead.district, lead.state].filter(Boolean).join(", ")}
                 </td>
                 <td className="px-3 py-2">{lead.priorityTier}</td>
@@ -208,6 +258,18 @@ export default function LeadsTable({ leads }: { leads: LeadRow[] }) {
                     </span>
                   ) : (
                     <span className="text-zinc-400">-</span>
+                  )}
+                </td>
+                <td className="px-3 py-2 text-zinc-500">
+                  {lead.sendCount > 0 ? (
+                    <div>
+                      <div>{formatSentAt(lead.lastSentAt)}</div>
+                      <div className="text-xs">
+                        {lead.sendCount} send{lead.sendCount === 1 ? "" : "s"}
+                      </div>
+                    </div>
+                  ) : (
+                    <span className="text-zinc-400">never</span>
                   )}
                 </td>
                 <td className="px-3 py-2">
