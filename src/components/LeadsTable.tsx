@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 export type LeadRow = {
   leadId: number;
   name: string;
+  email: string;
   state: string;
   district: string;
   priorityTier: string;
@@ -24,6 +25,14 @@ const CATEGORY_COLOR: Record<string, string> = {
 
 async function generateReport(leadId: number) {
   const res = await fetch(`/api/leads/${leadId}/generate-report`, { method: "POST" });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error || `Request failed with status ${res.status}`);
+  }
+}
+
+async function sendReport(leadId: number) {
+  const res = await fetch(`/api/leads/${leadId}/send`, { method: "POST" });
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
     throw new Error(body.error || `Request failed with status ${res.status}`);
@@ -64,6 +73,25 @@ export default function LeadsTable({ leads }: { leads: LeadRow[] }) {
       });
   };
 
+  const handleSendOne = (lead: LeadRow) => {
+    const confirmed = window.confirm(
+      `Send outreach email with the attached report to ${lead.name} <${lead.email}>?\n\nThis sends a REAL email.`
+    );
+    if (!confirmed) return;
+
+    setBusy((prev) => new Set(prev).add(lead.leadId));
+    sendReport(lead.leadId)
+      .catch((err) => alert(`Failed to send to lead ${lead.leadId}: ${err.message}`))
+      .finally(() => {
+        setBusy((prev) => {
+          const next = new Set(prev);
+          next.delete(lead.leadId);
+          return next;
+        });
+        startTransition(() => router.refresh());
+      });
+  };
+
   const handleGenerateSelected = async () => {
     const ids = Array.from(selected);
     let done = 0;
@@ -82,6 +110,36 @@ export default function LeadsTable({ leads }: { leads: LeadRow[] }) {
     startTransition(() => router.refresh());
   };
 
+  const handleSendSelected = async () => {
+    const targets = leads.filter((l) => selected.has(l.leadId) && l.hasReport);
+    const skipped = selected.size - targets.length;
+    const confirmed = window.confirm(
+      `Send outreach emails to ${targets.length} lead(s)?${
+        skipped > 0 ? ` (${skipped} skipped - no report generated yet)` : ""
+      }\n\nThis sends REAL emails and is subject to the daily send limit.`
+    );
+    if (!confirmed) return;
+
+    let done = 0;
+    setBulkStatus(`Sending 0 / ${targets.length}...`);
+    for (const lead of targets) {
+      try {
+        await sendReport(lead.leadId);
+      } catch (err) {
+        console.error(`Failed to send to lead ${lead.leadId}`, err);
+        setBulkStatus(`Stopped after ${done} / ${targets.length}: ${(err as Error).message}`);
+        break;
+      }
+      done += 1;
+      setBulkStatus(`Sending ${done} / ${targets.length}...`);
+    }
+    if (done === targets.length) {
+      setBulkStatus(`Done: sent ${done} email(s).`);
+    }
+    setSelected(new Set());
+    startTransition(() => router.refresh());
+  };
+
   return (
     <div>
       <div className="mb-3 flex items-center gap-3">
@@ -92,6 +150,14 @@ export default function LeadsTable({ leads }: { leads: LeadRow[] }) {
           className="rounded bg-black px-3 py-1.5 text-sm font-medium text-white disabled:opacity-40 dark:bg-white dark:text-black"
         >
           Generate report for selected ({selected.size})
+        </button>
+        <button
+          type="button"
+          onClick={handleSendSelected}
+          disabled={selected.size === 0}
+          className="rounded border border-red-300 px-3 py-1.5 text-sm font-medium text-red-700 disabled:opacity-40 dark:border-red-800 dark:text-red-400"
+        >
+          Send selected ({selected.size})
         </button>
         {bulkStatus && <span className="text-sm text-zinc-500">{bulkStatus}</span>}
         {isPending && <span className="text-sm text-zinc-500">Refreshing...</span>}
@@ -166,11 +232,12 @@ export default function LeadsTable({ leads }: { leads: LeadRow[] }) {
                     )}
                     <button
                       type="button"
-                      disabled
-                      title="Send pipeline not built yet (Phase 7)"
-                      className="rounded border border-zinc-200 px-2 py-1 text-xs text-zinc-400 dark:border-zinc-800"
+                      onClick={() => handleSendOne(lead)}
+                      disabled={!lead.hasReport || busy.has(lead.leadId)}
+                      title={lead.hasReport ? "Sends a real email to this lead" : "Generate a report first"}
+                      className="rounded border border-zinc-300 px-2 py-1 text-xs disabled:opacity-40 dark:border-zinc-700"
                     >
-                      Send
+                      {lead.status === "sent" ? "Resend" : "Send"}
                     </button>
                   </div>
                 </td>

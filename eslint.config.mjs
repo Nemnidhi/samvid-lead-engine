@@ -24,6 +24,7 @@ const eslintConfig = [
       // so these must stay CommonJS even though they live under src/
       "src/lib/classify.js",
       "src/lib/generateParagraph.js",
+      "src/lib/sendEmail.js",
     ],
   },
 ];

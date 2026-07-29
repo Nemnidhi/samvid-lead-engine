@@ -61,6 +61,7 @@ export default async function Dashboard({
   const rows: LeadRow[] = docs.map((d) => ({
     leadId: d.lead_id as number,
     name: d.name as string,
+    email: (d.email as string) || "",
     state: (d.state as string) || "",
     district: (d.district as string) || "",
     priorityTier: (d.priority_tier as string) || "",
