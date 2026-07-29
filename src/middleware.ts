@@ -22,5 +22,11 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/api/leads/:path*"],
+  matcher: [
+    "/dashboard/:path*",
+    "/api/leads/:path*",
+    "/meta-page-check/:path*",
+    "/api/meta-page-search/:path*",
+    "/api/auth/facebook/:path*",
+  ],
 };
