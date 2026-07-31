@@ -26,6 +26,14 @@ const CATEGORY_COLOR: Record<string, string> = {
   D: "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300",
 };
 
+const STATUS_COLOR: Record<string, string> = {
+  new: "text-zinc-500",
+  enriched: "text-blue-600 dark:text-blue-400",
+  classified: "text-indigo-600 dark:text-indigo-400",
+  reported: "text-purple-600 dark:text-purple-400",
+  sent: "text-green-600 dark:text-green-400",
+};
+
 let errorIdCounter = 0;
 
 async function generateReport(leadId: number) {
@@ -50,6 +58,15 @@ function formatSentAt(iso?: string) {
     dateStyle: "medium",
     timeStyle: "short",
   });
+}
+
+function Spinner() {
+  return (
+    <svg className="h-3 w-3 animate-spin" viewBox="0 0 24 24" fill="none">
+      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+    </svg>
+  );
 }
 
 export default function LeadsTable({ leads }: { leads: LeadRow[] }) {
@@ -166,32 +183,32 @@ export default function LeadsTable({ leads }: { leads: LeadRow[] }) {
   return (
     <div>
       {errors.length > 0 && (
-        <div className="mb-3 space-y-1">
+        <div className="fixed right-4 top-4 z-50 w-80 space-y-2">
           {errors.map((e) => (
             <div
               key={e.id}
-              className="flex items-start justify-between gap-3 rounded border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-800 dark:border-red-800 dark:bg-red-950/40 dark:text-red-300"
+              className="flex items-start justify-between gap-3 rounded-lg border border-red-200 bg-white px-3 py-2.5 text-sm text-red-800 shadow-lg dark:border-red-900 dark:bg-zinc-950 dark:text-red-300"
             >
               <span>{e.message}</span>
               <button
                 type="button"
                 onClick={() => dismissError(e.id)}
-                className="shrink-0 text-red-500 hover:text-red-700 dark:text-red-400"
+                className="shrink-0 text-red-400 hover:text-red-600 dark:text-red-500"
                 aria-label="Dismiss"
               >
-                x
+                &times;
               </button>
             </div>
           ))}
         </div>
       )}
 
-      <div className="mb-3 flex items-center gap-3">
+      <div className="mb-3 flex flex-wrap items-center gap-3">
         <button
           type="button"
           onClick={handleGenerateSelected}
           disabled={selected.size === 0}
-          className="rounded bg-black px-3 py-1.5 text-sm font-medium text-white disabled:opacity-40 dark:bg-white dark:text-black"
+          className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-indigo-500 disabled:opacity-40 disabled:hover:bg-indigo-600"
         >
           Generate report for selected ({selected.size})
         </button>
@@ -199,59 +216,72 @@ export default function LeadsTable({ leads }: { leads: LeadRow[] }) {
           type="button"
           onClick={handleSendSelected}
           disabled={selected.size === 0}
-          className="rounded border border-red-300 px-3 py-1.5 text-sm font-medium text-red-700 disabled:opacity-40 dark:border-red-800 dark:text-red-400"
+          className="rounded-md border border-red-300 px-3 py-1.5 text-sm font-medium text-red-700 hover:bg-red-50 disabled:opacity-40 disabled:hover:bg-transparent dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950/40"
         >
           Send selected ({selected.size})
         </button>
         {bulkStatus && <span className="text-sm text-zinc-500">{bulkStatus}</span>}
-        {isPending && <span className="text-sm text-zinc-500">Refreshing...</span>}
+        {isPending && (
+          <span className="flex items-center gap-1.5 text-sm text-zinc-500">
+            <Spinner /> Refreshing...
+          </span>
+        )}
       </div>
 
-      <div className="overflow-x-auto rounded border border-zinc-200 dark:border-zinc-800">
+      <div className="overflow-x-auto rounded-lg border border-zinc-200 shadow-sm dark:border-zinc-800">
         <table className="w-full text-left text-sm">
-          <thead className="bg-zinc-50 dark:bg-zinc-900">
+          <thead className="sticky top-0 bg-zinc-50 dark:bg-zinc-900">
             <tr>
-              <th className="px-3 py-2">
+              <th className="px-3 py-2.5">
                 <input
                   type="checkbox"
                   checked={leads.length > 0 && selected.size === leads.length}
                   onChange={toggleAll}
                 />
               </th>
-              <th className="px-3 py-2">Name</th>
-              <th className="px-3 py-2">Contact</th>
-              <th className="px-3 py-2">Location</th>
-              <th className="px-3 py-2">Priority</th>
-              <th className="px-3 py-2">Status</th>
-              <th className="px-3 py-2">Category</th>
-              <th className="px-3 py-2">Last Sent</th>
-              <th className="px-3 py-2">Actions</th>
+              <th className="px-3 py-2.5 font-medium text-zinc-500">Name</th>
+              <th className="px-3 py-2.5 font-medium text-zinc-500">Contact</th>
+              <th className="px-3 py-2.5 font-medium text-zinc-500">Location</th>
+              <th className="px-3 py-2.5 font-medium text-zinc-500">Priority</th>
+              <th className="px-3 py-2.5 font-medium text-zinc-500">Status</th>
+              <th className="px-3 py-2.5 font-medium text-zinc-500">Category</th>
+              <th className="px-3 py-2.5 font-medium text-zinc-500">Last Sent</th>
+              <th className="px-3 py-2.5 font-medium text-zinc-500">Actions</th>
             </tr>
           </thead>
-          <tbody>
-            {leads.map((lead) => (
-              <tr key={lead.leadId} className="border-t border-zinc-100 dark:border-zinc-800">
-                <td className="px-3 py-2">
+          <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
+            {leads.map((lead, i) => (
+              <tr
+                key={lead.leadId}
+                className={
+                  i % 2 === 0
+                    ? "bg-white dark:bg-zinc-950"
+                    : "bg-zinc-50/60 dark:bg-zinc-900/40"
+                }
+              >
+                <td className="px-3 py-2.5">
                   <input
                     type="checkbox"
                     checked={selected.has(lead.leadId)}
                     onChange={() => toggle(lead.leadId)}
                   />
                 </td>
-                <td className="px-3 py-2">{lead.name}</td>
-                <td className="px-3 py-2 text-zinc-500">
+                <td className="px-3 py-2.5 font-medium text-zinc-900 dark:text-zinc-100">{lead.name}</td>
+                <td className="px-3 py-2.5 text-zinc-500">
                   <div>{lead.email || <span className="text-zinc-400">no email</span>}</div>
                   {lead.phone && <div className="text-xs">{lead.phone}</div>}
                 </td>
-                <td className="px-3 py-2 text-zinc-500">
+                <td className="px-3 py-2.5 text-zinc-500">
                   {[lead.district, lead.state].filter(Boolean).join(", ")}
                 </td>
-                <td className="px-3 py-2">{lead.priorityTier}</td>
-                <td className="px-3 py-2 text-zinc-500">{lead.status}</td>
-                <td className="px-3 py-2">
+                <td className="px-3 py-2.5">{lead.priorityTier}</td>
+                <td className={`px-3 py-2.5 font-medium ${STATUS_COLOR[lead.status] || "text-zinc-500"}`}>
+                  {lead.status}
+                </td>
+                <td className="px-3 py-2.5">
                   {lead.category ? (
                     <span
-                      className={`rounded px-2 py-0.5 text-xs font-medium ${CATEGORY_COLOR[lead.category] || ""}`}
+                      className={`rounded-full px-2 py-0.5 text-xs font-medium ${CATEGORY_COLOR[lead.category] || ""}`}
                     >
                       {lead.category}
                       {lead.confidence === "partial" ? " (partial)" : ""}
@@ -260,7 +290,7 @@ export default function LeadsTable({ leads }: { leads: LeadRow[] }) {
                     <span className="text-zinc-400">-</span>
                   )}
                 </td>
-                <td className="px-3 py-2 text-zinc-500">
+                <td className="px-3 py-2.5 text-zinc-500">
                   {lead.sendCount > 0 ? (
                     <div>
                       <div>{formatSentAt(lead.lastSentAt)}</div>
@@ -272,14 +302,15 @@ export default function LeadsTable({ leads }: { leads: LeadRow[] }) {
                     <span className="text-zinc-400">never</span>
                   )}
                 </td>
-                <td className="px-3 py-2">
-                  <div className="flex gap-2">
+                <td className="px-3 py-2.5">
+                  <div className="flex flex-wrap gap-1.5">
                     <button
                       type="button"
                       onClick={() => handleGenerateOne(lead.leadId)}
                       disabled={busy.has(lead.leadId)}
-                      className="rounded border border-zinc-300 px-2 py-1 text-xs disabled:opacity-40 dark:border-zinc-700"
+                      className="flex items-center gap-1 rounded-md border border-zinc-300 px-2 py-1 text-xs hover:bg-zinc-50 disabled:opacity-40 disabled:hover:bg-transparent dark:border-zinc-700 dark:hover:bg-zinc-900"
                     >
+                      {busy.has(lead.leadId) && <Spinner />}
                       {busy.has(lead.leadId) ? "Working..." : lead.hasReport ? "Regenerate" : "Generate"}
                     </button>
                     {lead.hasReport && (
@@ -287,7 +318,7 @@ export default function LeadsTable({ leads }: { leads: LeadRow[] }) {
                         href={`/api/leads/${lead.leadId}/report`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="rounded border border-zinc-300 px-2 py-1 text-xs dark:border-zinc-700"
+                        className="rounded-md border border-zinc-300 px-2 py-1 text-xs hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-900"
                       >
                         Preview
                       </a>
@@ -297,7 +328,7 @@ export default function LeadsTable({ leads }: { leads: LeadRow[] }) {
                       onClick={() => handleSendOne(lead)}
                       disabled={!lead.hasReport || busy.has(lead.leadId)}
                       title={lead.hasReport ? "Sends a real email to this lead" : "Generate a report first"}
-                      className="rounded border border-zinc-300 px-2 py-1 text-xs disabled:opacity-40 dark:border-zinc-700"
+                      className="rounded-md border border-red-300 px-2 py-1 text-xs text-red-700 hover:bg-red-50 disabled:opacity-40 disabled:hover:bg-transparent dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950/40"
                     >
                       {lead.status === "sent" ? "Resend" : "Send"}
                     </button>
@@ -305,6 +336,13 @@ export default function LeadsTable({ leads }: { leads: LeadRow[] }) {
                 </td>
               </tr>
             ))}
+            {leads.length === 0 && (
+              <tr>
+                <td colSpan={9} className="px-3 py-10 text-center text-zinc-400">
+                  No leads match the current filters.
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
