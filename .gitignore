@@ -50,3 +50,6 @@ next-env.d.ts
 
 # generated report PDFs (contain real business data) - not for git
 /data/reports/
+
+# session handoff notes (contain real credentials) - local only, not for git
+HANDOFF.md
