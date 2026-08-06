@@ -4,6 +4,12 @@
 // Vercel function - it loops over many leads and could exceed serverless
 // timeouts.
 // Usage: node scripts/enrich-leads.js [batchSize]
+//        node scripts/enrich-leads.js [batchSize] --regoogle
+//          Re-runs ONLY the Google Business check for leads whose
+//          enrichment.google_business.checked is still false (e.g. leads
+//          enriched back when GOOGLE_PLACES_API_KEY wasn't configured yet).
+//          Leaves website/meta_ads and lead status untouched - follow up
+//          with `classify-leads -- <n> --reclassify` afterward.
 
 require("dotenv").config();
 
@@ -38,6 +44,7 @@ async function enrichOne(lead) {
 }
 
 async function main() {
+  const regoogle = process.argv.includes("--regoogle");
   const batchSize = parseInt(process.argv[2] || process.env.ENRICHMENT_BATCH_SIZE || "10", 10);
 
   const uri = process.env.MONGODB_URI;
@@ -51,12 +58,49 @@ async function main() {
   let processed = 0;
   let failed = 0;
   const websiteFoundCount = { yes: 0, no: 0 };
+  const googleFoundCount = { yes: 0, no: 0 };
 
   try {
     await client.connect();
     const db = client.db(dbName);
     const leads = db.collection("leads");
     const enrichment = db.collection("enrichment");
+
+    if (regoogle) {
+      const staleIds = (
+        await enrichment.find({ "google_business.checked": false }).project({ lead_id: 1 }).limit(batchSize).toArray()
+      ).map((e) => e.lead_id);
+      const batch = await leads.find({ lead_id: { $in: staleIds } }).toArray();
+
+      console.log(`Re-checking Google Business for ${batch.length} lead(s) (batch size ${batchSize})`);
+
+      for (const lead of batch) {
+        try {
+          const googleBusiness = await checkGoogleBusiness(lead.name, lead.district, lead.state).catch((err) => ({
+            checked: false,
+            found: null,
+            checked_at: new Date(),
+            error: String(err),
+          }));
+          await enrichment.updateOne({ lead_id: lead.lead_id }, { $set: { google_business: googleBusiness } });
+          processed += 1;
+          if (googleBusiness.checked) googleFoundCount[googleBusiness.found ? "yes" : "no"] += 1;
+          console.log(
+            `  lead_id ${lead.lead_id} (${lead.name}): google_business=${
+              googleBusiness.checked ? (googleBusiness.found ? "found" : "not found") : "still not checked"
+            }`
+          );
+        } catch (err) {
+          failed += 1;
+          console.error(`  lead_id ${lead.lead_id} (${lead.name}) failed:`, err);
+        }
+      }
+
+      console.log(
+        `Done. Processed: ${processed}, failed: ${failed}, google business found: ${googleFoundCount.yes}, not found: ${googleFoundCount.no}`
+      );
+      return;
+    }
 
     const batch = await leads
       .find({ status: "new" })
