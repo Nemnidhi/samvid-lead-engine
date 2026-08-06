@@ -30,7 +30,7 @@ export async function POST(
   }
 
   const paragraphResult = await generateParagraph(lead, enrichment, classification);
-  const doc = buildReportDocument({
+  const doc = await buildReportDocument({
     lead,
     enrichment,
     classification,

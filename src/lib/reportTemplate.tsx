@@ -2,9 +2,39 @@
 // scripts/lib/reportTemplate.js, which the standalone CLI script uses -
 // kept as a separate file because @react-pdf/renderer is ESM-only and a
 // plain CommonJS require() of it fails Next's webpack bundling, while a
-// real `import` in a .tsx file works natively.
+// real `import` in a .tsx file works natively. Company details and pricing
+// live in src/lib/reportConfig.js (single shared file, edit values there).
 
-import { Document, Page, View, Text, StyleSheet } from "@react-pdf/renderer";
+import { Document, Page, View, Text, Image, Link, StyleSheet } from "@react-pdf/renderer";
+import QRCode from "qrcode";
+import {
+  COMPANY,
+  WHO_WE_ARE,
+  PRIVACY_NOTE,
+  SOLUTION_MAP,
+  IMPACT_MAP,
+  PACKAGES_NOTE,
+  DEFAULT_PAIN_POINTS,
+  AUTOMATION_FLOW,
+  PRICING_TIERS,
+  CUSTOM_TIER,
+  CLOSING_CTA,
+  RESPONSE_TIME_NOTE,
+  WHATSAPP_LINK,
+  NEXT_STEPS,
+} from "./reportConfig";
+import { getIndustryPainPointsText, getRevenueLeaks, getIndustryOutlookLine } from "./industryKnowledge";
+
+// Maps Digital Presence Audit row labels to the gap category used to match
+// industry knowledge-bank pain points - kept small and honest: we only tag
+// against gaps we actually measure, not operational issues we have no
+// signal for.
+const ROW_TO_GAP_TAG: Record<string, string> = {
+  Website: "website",
+  "Technical SEO": "website",
+  "Google Business profile": "website",
+  "Meta ad activity": "social",
+};
 
 const TIER_LABEL: Record<string, string> = {
   A: "No digital presence found",
@@ -23,12 +53,13 @@ const TIER_COLOR: Record<string, string> = {
 const styles = StyleSheet.create({
   page: {
     padding: 40,
+    paddingBottom: 56,
     fontSize: 11,
     fontFamily: "Helvetica",
     color: "#18181b",
   },
   header: {
-    marginBottom: 20,
+    marginBottom: 16,
     borderBottom: "2 solid #18181b",
     paddingBottom: 12,
   },
@@ -45,6 +76,54 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: "#52525b",
     marginTop: 2,
+  },
+  hook: {
+    fontSize: 13,
+    fontWeight: 700,
+    color: "#b91c1c",
+    marginTop: 10,
+  },
+  leakIntro: {
+    fontSize: 10.5,
+    color: "#3f3f46",
+    marginBottom: 6,
+  },
+  leakRow: {
+    flexDirection: "row",
+    paddingVertical: 3,
+  },
+  leakBullet: {
+    width: 12,
+    fontSize: 10,
+    color: "#b91c1c",
+    fontWeight: 700,
+  },
+  leakText: {
+    flex: 1,
+    fontSize: 10,
+    color: "#27272a",
+  },
+  solutionImpact: {
+    fontSize: 9,
+    color: "#71717a",
+    marginTop: -3,
+    marginBottom: 7,
+  },
+  companyBox: {
+    marginBottom: 18,
+    padding: 10,
+    borderRadius: 4,
+    backgroundColor: "#f4f4f5",
+  },
+  companyText: {
+    fontSize: 9.5,
+    lineHeight: 1.5,
+    color: "#3f3f46",
+  },
+  companyMeta: {
+    fontSize: 8.5,
+    color: "#71717a",
+    marginTop: 6,
   },
   section: {
     marginBottom: 18,
@@ -84,15 +163,213 @@ const styles = StyleSheet.create({
     lineHeight: 1.5,
     color: "#27272a",
   },
+  industryOutlook: {
+    fontSize: 9,
+    lineHeight: 1.4,
+    color: "#71717a",
+    fontStyle: "italic",
+    marginTop: 6,
+  },
+  screenshot: {
+    marginTop: 6,
+    maxWidth: 240,
+    border: "1 solid #e4e4e7",
+  },
+  competitorRow: {
+    paddingVertical: 4,
+    fontSize: 10,
+    color: "#27272a",
+  },
+  testimonialBox: {
+    marginBottom: 8,
+    padding: 10,
+    borderRadius: 4,
+    backgroundColor: "#f4f4f5",
+  },
+  testimonialQuote: {
+    fontSize: 10,
+    fontStyle: "italic",
+    lineHeight: 1.4,
+    color: "#27272a",
+  },
+  testimonialAuthor: {
+    fontSize: 8.5,
+    color: "#71717a",
+    marginTop: 4,
+  },
+  packagesNote: {
+    fontSize: 9.5,
+    color: "#52525b",
+    marginBottom: 8,
+  },
+  solutionRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingVertical: 6,
+    borderBottom: "1 solid #e4e4e7",
+  },
+  solutionGap: {
+    fontSize: 10.5,
+    color: "#b91c1c",
+    flex: 1,
+  },
+  solutionArrow: {
+    fontSize: 10.5,
+    color: "#a1a1aa",
+    marginHorizontal: 6,
+  },
+  solutionFix: {
+    fontSize: 10.5,
+    fontWeight: 700,
+    color: "#15803d",
+    flex: 1,
+    textAlign: "right",
+  },
+  flowRowWrap: {
+    marginBottom: 8,
+  },
+  flowBranchLabel: {
+    fontSize: 8.5,
+    fontStyle: "italic",
+    color: "#71717a",
+    marginBottom: 4,
+  },
+  flowChain: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  flowBox: {
+    minWidth: 110,
+    maxWidth: 140,
+    padding: 6,
+    borderRadius: 5,
+    border: "1 solid #d4d4d8",
+  },
+  flowBoxEntry: {
+    backgroundColor: "#eef2ff",
+    borderColor: "#6366f1",
+  },
+  flowBoxInterested: {
+    backgroundColor: "#f0fdf4",
+    borderColor: "#22c55e",
+  },
+  flowBoxNoReply: {
+    backgroundColor: "#fffbeb",
+    borderColor: "#d97706",
+  },
+  flowBoxTitle: {
+    fontSize: 8.5,
+    fontWeight: 700,
+    textAlign: "center",
+    color: "#27272a",
+  },
+  flowBoxSubtitle: {
+    fontSize: 7,
+    textAlign: "center",
+    color: "#71717a",
+    marginTop: 2,
+  },
+  flowArrow: {
+    fontSize: 12,
+    color: "#a1a1aa",
+    marginHorizontal: 4,
+  },
+  priceTable: {
+    marginTop: 4,
+  },
+  priceHeaderRow: {
+    flexDirection: "row",
+    borderBottom: "1 solid #3f3f46",
+    paddingBottom: 4,
+    marginBottom: 4,
+  },
+  priceRow: {
+    flexDirection: "row",
+    paddingVertical: 6,
+    borderBottom: "1 solid #e4e4e7",
+  },
+  priceColName: { flex: 1, fontSize: 10 },
+  priceColOneTime: { flex: 1.1, fontSize: 10 },
+  priceColMonthly: { flex: 1.1, fontSize: 10 },
+  priceColIncludes: { flex: 2, fontSize: 9, color: "#52525b" },
+  priceHeaderText: { fontSize: 9, fontWeight: 700, color: "#3f3f46", textTransform: "uppercase" },
+  priceNameText: { fontSize: 10, fontWeight: 700 },
+  customTierBox: {
+    marginTop: 10,
+    padding: 10,
+    borderRadius: 4,
+    border: "1 solid #d4d4d8",
+    backgroundColor: "#fafafa",
+  },
+  customTierTitle: {
+    fontSize: 10,
+    fontWeight: 700,
+    marginBottom: 4,
+  },
+  customTierLine: {
+    fontSize: 9.5,
+    color: "#3f3f46",
+    marginTop: 2,
+  },
+  nextStepRow: {
+    flexDirection: "row",
+    marginBottom: 5,
+  },
+  nextStepNumber: {
+    width: 16,
+    fontSize: 10,
+    fontWeight: 700,
+    color: "#4f46e5",
+  },
+  nextStepText: {
+    flex: 1,
+    fontSize: 10,
+    color: "#27272a",
+  },
+  ctaBox: {
+    marginTop: 4,
+    padding: 12,
+    borderRadius: 4,
+    backgroundColor: "#eef2ff",
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  ctaTextCol: {
+    flex: 1,
+    paddingRight: 12,
+  },
+  ctaText: {
+    fontSize: 11,
+    lineHeight: 1.5,
+    color: "#312e81",
+    fontWeight: 700,
+  },
+  ctaResponseTime: {
+    fontSize: 9,
+    color: "#4338ca",
+    marginTop: 6,
+    fontWeight: 400,
+  },
+  ctaQr: {
+    width: 64,
+    height: 64,
+  },
+  ctaQrCaption: {
+    fontSize: 7,
+    color: "#4338ca",
+    textAlign: "center",
+    marginTop: 3,
+    width: 64,
+  },
   footer: {
     position: "absolute",
-    bottom: 30,
+    bottom: 24,
     left: 40,
     right: 40,
-    fontSize: 9,
+    fontSize: 8,
     color: "#a1a1aa",
     borderTop: "1 solid #e4e4e7",
-    paddingTop: 8,
+    paddingTop: 6,
   },
 });
 
@@ -103,6 +380,55 @@ function statusLabel(channel: Channel) {
   return channel.found ? "Found" : "Not found";
 }
 
+function FlowBox({
+  title,
+  subtitle,
+  variant,
+}: {
+  title: string;
+  subtitle?: string | null;
+  variant: "entry" | "interested" | "noReply";
+}) {
+  const variantStyle =
+    variant === "entry" ? styles.flowBoxEntry : variant === "interested" ? styles.flowBoxInterested : styles.flowBoxNoReply;
+  return (
+    <View style={[styles.flowBox, variantStyle]}>
+      <Text style={styles.flowBoxTitle}>{title}</Text>
+      {subtitle ? <Text style={styles.flowBoxSubtitle}>{subtitle}</Text> : null}
+    </View>
+  );
+}
+
+function FlowChain({
+  steps,
+  variant,
+}: {
+  steps: [string, string | null][];
+  variant: "entry" | "interested" | "noReply";
+}) {
+  return (
+    <View style={styles.flowChain}>
+      {steps.map(([title, subtitle], i) => (
+        <View key={i} style={{ flexDirection: "row", alignItems: "center" }}>
+          {i > 0 ? <Text style={styles.flowArrow}>{"->"}</Text> : null}
+          <FlowBox title={title} subtitle={subtitle} variant={variant} />
+        </View>
+      ))}
+    </View>
+  );
+}
+
+export type Competitor = {
+  name: string;
+  channelsFound: string[];
+};
+
+export type Testimonial = {
+  quote: string;
+  author: string;
+  business?: string;
+};
+
 export type ReportInput = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   lead: any;
@@ -111,11 +437,31 @@ export type ReportInput = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   classification: any;
   paragraph: string;
+  // Only rendered once an enrichment step actually produces this - omitted today.
+  searchScreenshotUrl?: string;
+  // Only rendered once nearby-competitor lookups are wired up - omitted today.
+  competitors?: Competitor[];
+  // Only rendered once real client testimonials exist - never fill with placeholder quotes.
+  testimonials?: Testimonial[];
 };
 
-export function buildReportDocument({ lead, enrichment, classification, paragraph }: ReportInput) {
+export async function buildReportDocument({
+  lead,
+  enrichment,
+  classification,
+  paragraph,
+  searchScreenshotUrl,
+  competitors = [],
+  testimonials = [],
+}: ReportInput) {
+  const whatsappQrDataUrl = await QRCode.toDataURL(WHATSAPP_LINK, { margin: 1, width: 128 });
+
   const rows: { label: string; value: string }[] = [
     { label: "Website", value: statusLabel({ checked: true, found: enrichment.website?.found }) },
+    // Technical SEO checker isn't built yet (see HANDOFF) - always shown as
+    // "Not yet checked" rather than silently omitted, so the offering is
+    // visible in every report even before the enrichment step exists.
+    { label: "Technical SEO", value: statusLabel({ checked: false }) },
   ];
   if (enrichment.google_business) {
     rows.push({ label: "Google Business profile", value: statusLabel(enrichment.google_business) });
@@ -124,13 +470,44 @@ export function buildReportDocument({ lead, enrichment, classification, paragrap
     rows.push({ label: "Meta ad activity", value: statusLabel(enrichment.meta_ads) });
   }
 
+  const solutionMap = SOLUTION_MAP as Record<string, string>;
+  const gapRows = rows.filter((r) => r.value === "Not found" && solutionMap[r.label]);
+  const missingTags = rows
+    .filter((r) => r.value === "Not found")
+    .map((r) => ROW_TO_GAP_TAG[r.label])
+    .filter((t): t is string => Boolean(t));
+  const industryPainPoints = getIndustryPainPointsText(lead.industry, missingTags);
+  const industryOutlook = getIndustryOutlookLine(lead.industry);
+  const revenueLeaks: string[] = getRevenueLeaks(lead.industry, missingTags);
+  const missingCount = rows.filter((r) => r.value === "Not found").length;
+  const hookText =
+    missingCount > 0
+      ? `${missingCount} of ${rows.length} channels we checked show no active presence.`
+      : "Your core digital presence is solid - the real opportunity is in what happens after someone finds you.";
+  const generatedOn = new Date().toLocaleDateString("en-IN", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+
   return (
     <Document title={`${lead.name} - Digital Presence Report`}>
-      <Page size="A4" style={styles.page}>
+      <Page size="A4" style={styles.page} wrap>
         <View style={styles.header}>
-          <Text style={styles.brand}>SAMVID LEAD ENGINE</Text>
+          <Text style={styles.brand}>{COMPANY.product.toUpperCase()}</Text>
           <Text style={styles.businessName}>{lead.name}</Text>
           <Text style={styles.location}>{[lead.district, lead.state].filter(Boolean).join(", ")}</Text>
+          <Text style={styles.hook}>{hookText}</Text>
+        </View>
+
+        <View style={styles.companyBox}>
+          <Text style={styles.companyText}>{WHO_WE_ARE}</Text>
+          <Text style={styles.companyMeta}>
+            {COMPANY.legalName} · GST {COMPANY.gst} · {COMPANY.address}
+          </Text>
+          <Text style={styles.companyMeta}>
+            {COMPANY.phone} · {COMPANY.email}
+          </Text>
         </View>
 
         <View style={styles.section}>
@@ -143,17 +520,165 @@ export function buildReportDocument({ lead, enrichment, classification, paragrap
           ))}
         </View>
 
+        {searchScreenshotUrl ? (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>What Customers See</Text>
+            <Text style={styles.paragraph}>Search result for &quot;{lead.name}&quot;:</Text>
+            {/* eslint-disable-next-line jsx-a11y/alt-text */}
+            <Image src={searchScreenshotUrl} style={styles.screenshot} />
+          </View>
+        ) : null}
+
+        {competitors.length > 0 ? (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>How You Compare Nearby</Text>
+            {competitors.map((c, i) => (
+              <Text style={styles.competitorRow} key={i}>
+                {c.name}: {c.channelsFound.length > 0 ? c.channelsFound.join(", ") : "no presence found"}
+              </Text>
+            ))}
+          </View>
+        ) : null}
+
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Assessment</Text>
           <Text style={[styles.badge, { backgroundColor: TIER_COLOR[classification.category] }]}>
             {`Tier ${classification.category}: ${TIER_LABEL[classification.category]}`}
           </Text>
           <Text style={styles.paragraph}>{paragraph}</Text>
+          {industryOutlook ? <Text style={styles.industryOutlook}>{industryOutlook}</Text> : null}
         </View>
 
-        <Text style={styles.footer}>
-          Prepared by Samvid Lead Engine. Based on publicly available information checked at time of
-          generation.
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>How This Plays Out Today</Text>
+          <Text style={styles.paragraph}>{lead.pain_points || industryPainPoints || DEFAULT_PAIN_POINTS}</Text>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>What This Is Costing You</Text>
+          <Text style={styles.leakIntro}>
+            Common revenue leaks for businesses in this position, not specific to any one company:
+          </Text>
+          {revenueLeaks.map((leak, i) => (
+            <View style={styles.leakRow} key={i}>
+              <Text style={styles.leakBullet}>{"-"}</Text>
+              <Text style={styles.leakText}>{leak}</Text>
+            </View>
+          ))}
+        </View>
+
+        {gapRows.length > 0 ? (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>What Fixes What</Text>
+            {gapRows.map((row, i) => (
+              <View key={i}>
+                <View style={styles.solutionRow}>
+                  <Text style={styles.solutionGap}>{row.label}: missing</Text>
+                  <Text style={styles.solutionArrow}>{"->"}</Text>
+                  <Text style={styles.solutionFix}>{solutionMap[row.label]}</Text>
+                </View>
+                {(IMPACT_MAP as Record<string, string>)[solutionMap[row.label]] ? (
+                  <Text style={styles.solutionImpact}>
+                    {(IMPACT_MAP as Record<string, string>)[solutionMap[row.label]]}
+                  </Text>
+                ) : null}
+              </View>
+            ))}
+          </View>
+        ) : null}
+
+        <View style={styles.section} break={gapRows.length > 2}>
+          <Text style={styles.sectionTitle}>What It Looks Like Solved</Text>
+          <View style={styles.flowRowWrap}>
+            <FlowChain steps={AUTOMATION_FLOW.entryChain as [string, string | null][]} variant="entry" />
+          </View>
+          <View style={styles.flowRowWrap}>
+            <Text style={styles.flowBranchLabel}>{AUTOMATION_FLOW.interested.label}</Text>
+            <FlowChain steps={AUTOMATION_FLOW.interested.steps as [string, string | null][]} variant="interested" />
+          </View>
+          <View style={styles.flowRowWrap}>
+            <Text style={styles.flowBranchLabel}>{AUTOMATION_FLOW.noReply.label}</Text>
+            <FlowChain steps={AUTOMATION_FLOW.noReply.steps as [string, string | null][]} variant="noReply" />
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Data & Privacy</Text>
+          <Text style={styles.paragraph}>
+            {PRIVACY_NOTE} Report generated on {generatedOn}.
+          </Text>
+        </View>
+
+        {testimonials.length > 0 ? (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>What Clients Say</Text>
+            {testimonials.map((t, i) => (
+              <View style={styles.testimonialBox} key={i}>
+                <Text style={styles.testimonialQuote}>&quot;{t.quote}&quot;</Text>
+                <Text style={styles.testimonialAuthor}>
+                  {t.author}
+                  {t.business ? `, ${t.business}` : ""}
+                </Text>
+              </View>
+            ))}
+          </View>
+        ) : null}
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Packages</Text>
+          <Text style={styles.packagesNote}>{PACKAGES_NOTE}</Text>
+          <View style={styles.priceTable}>
+            <View style={styles.priceHeaderRow}>
+              <Text style={[styles.priceHeaderText, { flex: 1 }]}>Tier</Text>
+              <Text style={[styles.priceHeaderText, { flex: 1.1 }]}>One-time</Text>
+              <Text style={[styles.priceHeaderText, { flex: 1.1 }]}>Monthly</Text>
+              <Text style={[styles.priceHeaderText, { flex: 2 }]}>Includes</Text>
+            </View>
+            {PRICING_TIERS.map((tier, i) => (
+              <View style={styles.priceRow} key={i}>
+                <Text style={[styles.priceColName, styles.priceNameText]}>{tier.name}</Text>
+                <Text style={styles.priceColOneTime}>{tier.oneTime}</Text>
+                <Text style={styles.priceColMonthly}>{tier.monthly}</Text>
+                <Text style={styles.priceColIncludes}>{tier.includes}</Text>
+              </View>
+            ))}
+          </View>
+          <View style={styles.customTierBox}>
+            <Text style={styles.customTierTitle}>{CUSTOM_TIER.name}</Text>
+            <Text style={styles.customTierLine}>One-time: {CUSTOM_TIER.oneTime}</Text>
+            <Text style={styles.customTierLine}>Ongoing: {CUSTOM_TIER.ongoing}</Text>
+            <Text style={styles.customTierLine}>{CUSTOM_TIER.includes}</Text>
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>What Happens Next</Text>
+          {NEXT_STEPS.map((step, i) => (
+            <View style={styles.nextStepRow} key={i}>
+              <Text style={styles.nextStepNumber}>{i + 1}.</Text>
+              <Text style={styles.nextStepText}>{step}</Text>
+            </View>
+          ))}
+        </View>
+
+        <View style={styles.section}>
+          <View style={styles.ctaBox}>
+            <View style={styles.ctaTextCol}>
+              <Text style={styles.ctaText}>{CLOSING_CTA}</Text>
+              <Text style={styles.ctaResponseTime}>{RESPONSE_TIME_NOTE}</Text>
+            </View>
+            <View>
+              {/* eslint-disable-next-line jsx-a11y/alt-text */}
+              <Image src={whatsappQrDataUrl} style={styles.ctaQr} />
+              <Link src={WHATSAPP_LINK} style={styles.ctaQrCaption}>
+                Scan or tap to chat
+              </Link>
+            </View>
+          </View>
+        </View>
+
+        <Text style={styles.footer} fixed>
+          {COMPANY.legalName} · GST {COMPANY.gst} · {COMPANY.email} · Based on publicly available information.
         </Text>
       </Page>
     </Document>

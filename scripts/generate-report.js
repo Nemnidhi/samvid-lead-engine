@@ -49,7 +49,7 @@ async function main() {
     }
     console.log(`  text: ${paragraphResult.text}`);
 
-    const doc = buildReportDocument({
+    const doc = await buildReportDocument({
       lead,
       enrichment,
       classification,
