@@ -1,10 +1,15 @@
 name: Enrich leads
 
-# Manual trigger only for now. Once GOOGLE_PLACES_API_KEY and
-# META_AD_LIBRARY_ACCESS_TOKEN are set as repo secrets and the pipeline has
-# been reviewed end-to-end, add a `schedule:` trigger here (e.g. every 15
-# minutes) to run this unattended against the live database.
+# Runs unattended every 15 minutes against the live database, processing
+# whatever's newly imported with status "new" (a no-op query if there's
+# nothing to do). GOOGLE_PLACES_API_KEY is live in repo secrets;
+# META_AD_LIBRARY_ACCESS_TOKEN is still blocked on Meta App Review, so
+# meta_ads checks will keep coming back checked:false until that lands.
+# workflow_dispatch is kept for on-demand runs (e.g. a larger manual batch,
+# or the --regoogle backfill mode) alongside the schedule.
 on:
+  schedule:
+    - cron: "*/15 * * * *"
   workflow_dispatch:
     inputs:
       batch_size:
