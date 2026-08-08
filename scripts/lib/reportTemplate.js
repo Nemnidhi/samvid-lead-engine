@@ -93,6 +93,7 @@ const styles = StyleSheet.create({
   leakIntro: {
     fontSize: 10.5,
     color: "#3f3f46",
+    marginTop: 8,
     marginBottom: 6,
   },
   leakRow: {
@@ -610,15 +611,7 @@ async function buildReportDocument({
         Text,
         { style: styles.paragraph },
         lead.pain_points || industryPainPoints || DEFAULT_PAIN_POINTS
-      )
-    )
-  );
-
-  sections.push(
-    React.createElement(
-      View,
-      { style: styles.section, key: "revenue-leaks" },
-      React.createElement(Text, { style: styles.sectionTitle }, "What This Is Costing You"),
+      ),
       React.createElement(
         Text,
         { style: styles.leakIntro },

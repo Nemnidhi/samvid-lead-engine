@@ -92,6 +92,7 @@ const styles = StyleSheet.create({
   leakIntro: {
     fontSize: 10.5,
     color: "#3f3f46",
+    marginTop: 8,
     marginBottom: 6,
   },
   leakRow: {
@@ -614,10 +615,6 @@ export async function buildReportDocument({
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>How This Plays Out Today</Text>
           <Text style={styles.paragraph}>{lead.pain_points || industryPainPoints || DEFAULT_PAIN_POINTS}</Text>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>What This Is Costing You</Text>
           <Text style={styles.leakIntro}>
             Common revenue leaks for businesses in this position, not specific to any one company:
           </Text>
