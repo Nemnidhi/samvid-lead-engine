@@ -23,7 +23,13 @@ import {
   WHATSAPP_LINK,
   NEXT_STEPS,
 } from "./reportConfig";
-import { getIndustryPainPointsText, getRevenueLeaks, getIndustryOutlookLine } from "./industryKnowledge";
+import {
+  getIndustryKnowledge,
+  getIndustryPainPointsText,
+  getRevenueLeaks,
+  getIndustryOutlookLine,
+  getCurrentFlowStages,
+} from "./industryKnowledge";
 
 // Maps Digital Presence Audit row labels to the gap category used to match
 // industry knowledge-bank pain points - kept small and honest: we only tag
@@ -234,6 +240,44 @@ const styles = StyleSheet.create({
     color: "#71717a",
     marginBottom: 4,
   },
+  flowSubheading: {
+    fontSize: 9.5,
+    fontWeight: 700,
+    color: "#27272a",
+    marginBottom: 4,
+    marginTop: 2,
+  },
+  todayIntro: {
+    fontSize: 9,
+    color: "#52525b",
+    marginBottom: 6,
+  },
+  todayWrap: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    marginBottom: 10,
+  },
+  todayPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    border: "1 solid #d4d4d8",
+    borderRadius: 4,
+    paddingVertical: 4,
+    paddingHorizontal: 6,
+    marginRight: 6,
+    marginBottom: 6,
+    backgroundColor: "#f4f4f5",
+  },
+  todayPillNumber: {
+    fontSize: 8,
+    fontWeight: 700,
+    color: "#71717a",
+    marginRight: 4,
+  },
+  todayPillText: {
+    fontSize: 8,
+    color: "#3f3f46",
+  },
   flowChain: {
     flexDirection: "row",
     alignItems: "center",
@@ -418,6 +462,19 @@ function FlowChain({
   );
 }
 
+function TodayFlow({ stages }: { stages: string[] }) {
+  return (
+    <View style={styles.todayWrap}>
+      {stages.map((stage, i) => (
+        <View style={styles.todayPill} key={i}>
+          <Text style={styles.todayPillNumber}>{i + 1}.</Text>
+          <Text style={styles.todayPillText}>{stage}</Text>
+        </View>
+      ))}
+    </View>
+  );
+}
+
 export type Competitor = {
   name: string;
   channelsFound: string[];
@@ -479,6 +536,11 @@ export async function buildReportDocument({
   const industryPainPoints = getIndustryPainPointsText(lead.industry, missingTags);
   const industryOutlook = getIndustryOutlookLine(lead.industry);
   const revenueLeaks: string[] = getRevenueLeaks(lead.industry, missingTags);
+  const industryEntry = getIndustryKnowledge(lead.industry);
+  const todayFlowStages: string[] = getCurrentFlowStages(lead.industry);
+  const todayIntro = industryEntry
+    ? `How a ${industryEntry.label.toLowerCase()} business like this typically runs today:`
+    : "How a business like this typically runs today:";
   const missingCount = rows.filter((r) => r.value === "Not found").length;
   const hookText =
     missingCount > 0
@@ -587,8 +649,14 @@ export async function buildReportDocument({
           </View>
         ) : null}
 
-        <View style={styles.section} break={gapRows.length > 2}>
+        <View style={styles.section}>
           <Text style={styles.sectionTitle}>What It Looks Like Solved</Text>
+
+          <Text style={styles.flowSubheading}>Today</Text>
+          <Text style={styles.todayIntro}>{todayIntro}</Text>
+          <TodayFlow stages={todayFlowStages} />
+
+          <Text style={styles.flowSubheading}>Where Automation Plugs In</Text>
           <View style={styles.flowRowWrap}>
             <FlowChain steps={AUTOMATION_FLOW.entryChain as [string, string | null][]} variant="entry" />
           </View>

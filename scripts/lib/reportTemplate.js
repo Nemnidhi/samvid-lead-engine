@@ -25,9 +25,11 @@ const {
   NEXT_STEPS,
 } = require("../../src/lib/reportConfig");
 const {
+  getIndustryKnowledge,
   getIndustryPainPointsText,
   getRevenueLeaks,
   getIndustryOutlookLine,
+  getCurrentFlowStages,
 } = require("../../src/lib/industryKnowledge");
 
 // Maps Digital Presence Audit row labels to the gap category used to match
@@ -239,6 +241,44 @@ const styles = StyleSheet.create({
     color: "#71717a",
     marginBottom: 4,
   },
+  flowSubheading: {
+    fontSize: 9.5,
+    fontWeight: 700,
+    color: "#27272a",
+    marginBottom: 4,
+    marginTop: 2,
+  },
+  todayIntro: {
+    fontSize: 9,
+    color: "#52525b",
+    marginBottom: 6,
+  },
+  todayWrap: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    marginBottom: 10,
+  },
+  todayPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    border: "1 solid #d4d4d8",
+    borderRadius: 4,
+    paddingVertical: 4,
+    paddingHorizontal: 6,
+    marginRight: 6,
+    marginBottom: 6,
+    backgroundColor: "#f4f4f5",
+  },
+  todayPillNumber: {
+    fontSize: 8,
+    fontWeight: 700,
+    color: "#71717a",
+    marginRight: 4,
+  },
+  todayPillText: {
+    fontSize: 8,
+    color: "#3f3f46",
+  },
   flowChain: {
     flexDirection: "row",
     alignItems: "center",
@@ -406,6 +446,21 @@ function flowChain(steps, variantStyle) {
   );
 }
 
+function todayFlow(stages) {
+  return React.createElement(
+    View,
+    { style: styles.todayWrap },
+    ...stages.map((stage, i) =>
+      React.createElement(
+        View,
+        { style: styles.todayPill, key: i },
+        React.createElement(Text, { style: styles.todayPillNumber }, `${i + 1}.`),
+        React.createElement(Text, { style: styles.todayPillText }, stage)
+      )
+    )
+  );
+}
+
 async function buildReportDocument({
   lead,
   enrichment,
@@ -439,6 +494,11 @@ async function buildReportDocument({
   const industryPainPoints = getIndustryPainPointsText(lead.industry, missingTags);
   const industryOutlook = getIndustryOutlookLine(lead.industry);
   const revenueLeaks = getRevenueLeaks(lead.industry, missingTags);
+  const industryEntry = getIndustryKnowledge(lead.industry);
+  const todayFlowStages = getCurrentFlowStages(lead.industry);
+  const todayIntro = industryEntry
+    ? `How a ${industryEntry.label.toLowerCase()} business like this typically runs today:`
+    : "How a business like this typically runs today:";
   const missingCount = rows.filter((r) => r.value === "Not found").length;
   const hookText =
     missingCount > 0
@@ -604,8 +664,12 @@ async function buildReportDocument({
   sections.push(
     React.createElement(
       View,
-      { style: styles.section, key: "flow", break: gapRows.length > 2 },
+      { style: styles.section, key: "flow" },
       React.createElement(Text, { style: styles.sectionTitle }, "What It Looks Like Solved"),
+      React.createElement(Text, { style: styles.flowSubheading }, "Today"),
+      React.createElement(Text, { style: styles.todayIntro }, todayIntro),
+      todayFlow(todayFlowStages),
+      React.createElement(Text, { style: styles.flowSubheading }, "Where Automation Plugs In"),
       React.createElement(
         View,
         { style: styles.flowRowWrap },
