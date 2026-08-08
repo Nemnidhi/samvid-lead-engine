@@ -24,11 +24,11 @@ import {
   NEXT_STEPS,
 } from "./reportConfig";
 import {
-  getIndustryKnowledge,
   getIndustryPainPointsText,
   getRevenueLeaks,
   getIndustryOutlookLine,
   getCurrentFlowStages,
+  getResolvedLabel,
 } from "./industryKnowledge";
 
 // Maps Digital Presence Audit row labels to the gap category used to match
@@ -534,13 +534,21 @@ export async function buildReportDocument({
     .filter((r) => r.value === "Not found")
     .map((r) => ROW_TO_GAP_TAG[r.label])
     .filter((t): t is string => Boolean(t));
-  const industryPainPoints = getIndustryPainPointsText(lead.industry, missingTags);
+  // Segment resolution hint: an explicit lead.segment always wins (manual
+  // override); otherwise inferred from whatever business-category-like text
+  // is available. Only matters for industries with a `segments` shape -
+  // ignored for flat/unsegmented ones.
+  const segmentHint = {
+    segment: lead.segment,
+    text: lead.business_category || lead.agent_type || lead.name,
+  };
+  const industryPainPoints = getIndustryPainPointsText(lead.industry, missingTags, segmentHint);
   const industryOutlook = getIndustryOutlookLine(lead.industry);
-  const revenueLeaks: string[] = getRevenueLeaks(lead.industry, missingTags);
-  const industryEntry = getIndustryKnowledge(lead.industry);
-  const todayFlowStages: string[] = getCurrentFlowStages(lead.industry);
-  const todayIntro = industryEntry
-    ? `How a ${industryEntry.label.toLowerCase()} business like this typically runs today:`
+  const revenueLeaks: string[] = getRevenueLeaks(lead.industry, missingTags, segmentHint);
+  const resolvedLabel = getResolvedLabel(lead.industry, segmentHint);
+  const todayFlowStages: string[] = getCurrentFlowStages(lead.industry, segmentHint);
+  const todayIntro = resolvedLabel
+    ? `How a ${resolvedLabel.toLowerCase()} business like this typically runs today:`
     : "How a business like this typically runs today:";
   const missingCount = rows.filter((r) => r.value === "Not found").length;
   const hookText =

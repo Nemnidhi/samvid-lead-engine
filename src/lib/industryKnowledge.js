@@ -36,82 +36,178 @@
 // Only 4 of 5 pain points exist, the 4th has no revenue leaks, and there is
 // no financialMatrix or outlook at all. Left empty/short rather than
 // fabricated. Ask for a complete version of that doc before relying on it.
+//
+// SEGMENTS: an industry is not one business - a real lead is one player at
+// one point in the value chain (raw material, manufacturer, wholesaler,
+// retailer...), each with genuinely different pain points, flow, and
+// margins. textile_apparel is the pilot for a `segments` shape: instead of
+// one blended profile, the industry has multiple segment profiles plus a
+// shared `outlook` (market-wide growth trend applies regardless of segment).
+// Un-piloted industries stay flat (painPoints/currentFlowStages/
+// financialMatrix directly on the industry object) - getIndustryProfile()
+// below handles both shapes transparently. Add `segments` to another
+// industry only once real segment-specific research exists for it - don't
+// fabricate a split just to match the pattern.
 
 const INDUSTRY_KNOWLEDGE = {
   textile_apparel: {
     label: "Textile & Apparel",
-    currentFlowStages: [
-      "Market research & buyer acquisition",
-      "Design, sampling & quotation",
-      "Material planning & sourcing",
-      "Spinning, weaving & dyeing",
-      "Cutting, sewing & finishing",
-      "Quality checks & packing",
-      "Dispatch, billing & retention",
-    ],
-    painPoints: [
-      {
-        issue: "Fragmented production and order visibility",
-        tags: ["website", "social"],
-        summary:
-          "Many businesses in this space still run on spreadsheets, paper job cards, and WhatsApp messages, so management often only learns about a delay or a missed order once it's already at risk.",
-        revenueLeaks: [
-          "Excess work-in-progress and idle machine or operator time",
-          "Unbalanced production lines and hidden rework",
-          "Missed buyer delivery windows and unplanned overtime",
+    // Wholesale/retail leads are expected to be the more common, more
+    // accessible target given the bottom-up (small-to-big) go-to-market
+    // strategy, so that's the fallback when segment can't be determined.
+    defaultSegment: "wholesale_retail",
+    segments: {
+      manufacturer: {
+        label: "Manufacturer / Producer",
+        currentFlowStages: [
+          "Market research & buyer acquisition",
+          "Design, sampling & quotation",
+          "Material planning & sourcing",
+          "Spinning, weaving & dyeing",
+          "Cutting, sewing & finishing",
+          "Quality checks & packing",
+          "Dispatch, billing & retention",
+        ],
+        painPoints: [
+          {
+            issue: "Fragmented production and order visibility",
+            tags: ["website", "social"],
+            summary:
+              "Many businesses in this space still run on spreadsheets, paper job cards, and WhatsApp messages, so management often only learns about a delay or a missed order once it's already at risk.",
+            revenueLeaks: [
+              "Excess work-in-progress and idle machine or operator time",
+              "Unbalanced production lines and hidden rework",
+              "Missed buyer delivery windows and unplanned overtime",
+            ],
+          },
+          {
+            issue: "Forecasting errors and inventory imbalance",
+            tags: ["website"],
+            summary:
+              "Demand is seasonal and trend-sensitive, and without a system tracking real enquiry and order data, it's easy to over-produce the wrong styles while running short on what's actually selling.",
+            revenueLeaks: [
+              "Unsold finished goods requiring markdowns",
+              "Stockouts of high-demand sizes or styles",
+              "Working capital trapped in slow-moving inventory",
+            ],
+          },
+          {
+            issue: "Slow collections and buyer concentration",
+            tags: ["social"],
+            summary:
+              "Long buyer credit terms combined with no automated follow-up on receivables creates a cash-flow gap that's easy to lose track of without a dedicated system.",
+            revenueLeaks: [
+              "Delayed receivables and higher working-capital expense",
+              "Unapproved deductions and debit notes going unchallenged",
+              "Cash-flow disruption when a major buyer's order slips",
+            ],
+          },
+          {
+            issue: "Raw-material price and quality volatility",
+            tags: [],
+            summary:
+              "Input costs can move significantly between quoting and purchasing, which erodes margin unless pricing includes a live-cost mechanism.",
+            revenueLeaks: [
+              "Orders quoted using outdated material prices",
+              "Emergency procurement at premium prices",
+              "Production stoppage caused by late supplier delivery",
+            ],
+          },
+          {
+            issue: "Shade, measurement and quality inconsistency",
+            tags: [],
+            summary:
+              "Orders can be rejected over shade variation, shrinkage, or measurement defects, which is costly without inline inspection and batch traceability.",
+            revenueLeaks: [
+              "Re-dyeing, reprocessing, and buyer debit notes",
+              "Product returns and marketplace penalties",
+              "Entire batches downgraded to lower-value markets",
+            ],
+          },
+        ],
+        financialMatrix: [
+          { scale: "Startup / Early Stage", revenue: "Rs. 25 lakh - Rs. 5 crore", margin: "-5% to 8%", profile: "Small apparel label, job-work unit, boutique manufacturer, or early D2C brand" },
+          { scale: "Small Scale", revenue: "Rs. 5 crore - Rs. 50 crore", margin: "3% to 10%", profile: "Local garment manufacturer, fabric processor, small exporter, or contract manufacturer" },
+          { scale: "Medium Scale", revenue: "Rs. 50 crore - Rs. 500 crore", margin: "5% to 12%", profile: "Integrated manufacturer, established exporter, or specialised technical-textile company" },
+          { scale: "Large Scale / Enterprise", revenue: "Above Rs. 500 crore", margin: "4% to 14%", profile: "Vertically integrated textile group, major exporter, or technical-textile enterprise" },
         ],
       },
-      {
-        issue: "Forecasting errors and inventory imbalance",
-        tags: ["website"],
-        summary:
-          "Demand is seasonal and trend-sensitive, and without a system tracking real enquiry and order data, it's easy to over-produce the wrong styles while running short on what's actually selling.",
-        revenueLeaks: [
-          "Unsold finished goods requiring markdowns",
-          "Stockouts of high-demand sizes or styles",
-          "Working capital trapped in slow-moving inventory",
+      wholesale_retail: {
+        label: "Wholesale / Retail / Trade-Facing",
+        currentFlowStages: [
+          "Sourcing from manufacturers/wholesalers",
+          "Inventory & stock receipt",
+          "Merchandising, display & catalog",
+          "Customer footfall / order intake",
+          "Sales, billing & invoicing",
+          "Credit sales & collections",
+          "Repeat business & restocking",
+        ],
+        painPoints: [
+          {
+            issue: "Inventory imbalance across size, color & style",
+            tags: ["website"],
+            summary:
+              "Fashion has a short shelf life, and most small and mid-sized traders plan stock on instinct or last year's sales rather than real demand data, so a style trending one season can be dead stock the next.",
+            revenueLeaks: [
+              "Markdowns and clearance sales that erode peak-season margin",
+              "Stockouts of fast-moving sizes alongside overstock of slow movers",
+              "Working capital tied up in unsold seasonal inventory",
+            ],
+          },
+          {
+            issue: "Credit sales and collections risk",
+            tags: ["social"],
+            summary:
+              "Wholesale-to-retail and B2B trade in this segment runs heavily on credit terms extended to downstream retailers and customers, often with no systematic follow-up on receivables.",
+            revenueLeaks: [
+              "Delayed payments straining working capital",
+              "Bad debts from over-extended credit to weak counterparties",
+              "Unapproved deductions and returns going unchallenged",
+            ],
+          },
+          {
+            issue: "Footfall-to-conversion pressure from e-commerce",
+            tags: ["website", "social"],
+            summary:
+              "Physical wholesale and retail outlets compete against fast-growing online fashion channels and organised retail for the same customer, and many independent traders have no online presence to defend against this.",
+            revenueLeaks: [
+              "Declining walk-in footfall and browsing-only visits",
+              "Lost sales to price comparison via mobile or online",
+              "Customer migration to organised, multi-brand outlets",
+            ],
+          },
+          {
+            issue: "GST/billing compliance and informal trade practices",
+            tags: [],
+            summary:
+              "Textile trade has historically relied on informal billing, and GST rate mismatches between inputs and finished goods add compliance friction, especially for smaller dealers.",
+            revenueLeaks: [
+              "Penalties and interest from unregistered or under-invoiced sales",
+              "Input tax credit lost due to non-compliant supplier invoices",
+              "Cash-flow strain from GST paid on inputs at higher rates than realised on sales",
+            ],
+          },
+          {
+            issue: "Shrinkage, pilferage and counterfeit/grey-market goods",
+            tags: [],
+            summary:
+              "Physical stock handling across multiple counters or godowns creates exposure to theft, billing fraud, and counterfeit or grey-market goods entering the supply chain.",
+            revenueLeaks: [
+              "Inventory shrinkage from theft or billing errors",
+              "Margin erosion from counterfeit goods undercutting genuine stock",
+              "Cash leakage through unrecorded or under-billed transactions",
+            ],
+          },
+        ],
+        financialMatrix: [
+          { scale: "Startup / Early Stage", revenue: "Rs. 20 lakh - Rs. 3 crore", margin: "3% to 15% (directional estimate)", profile: "Single retail showroom, small fabric or garment counter, or early-stage trading firm" },
+          { scale: "Small Scale", revenue: "Rs. 3 crore - Rs. 25 crore", margin: "3% to 12% (directional estimate)", profile: "Multi-counter retail store, local wholesale dealer, or regional trading firm" },
+          { scale: "Medium Scale", revenue: "Rs. 25 crore - Rs. 200 crore", margin: "3% to 10% (directional estimate)", profile: "Wholesale distributor with a dealer/retailer network, or multi-store regional retail chain" },
+          { scale: "Large Scale / Enterprise", revenue: "Above Rs. 200 crore", margin: "2% to 9% (directional estimate)", profile: "Multi-city retail chain, large regional trading house, or organised wholesale distribution business" },
         ],
       },
-      {
-        issue: "Slow collections and buyer concentration",
-        tags: ["social"],
-        summary:
-          "Long buyer credit terms combined with no automated follow-up on receivables creates a cash-flow gap that's easy to lose track of without a dedicated system.",
-        revenueLeaks: [
-          "Delayed receivables and higher working-capital expense",
-          "Unapproved deductions and debit notes going unchallenged",
-          "Cash-flow disruption when a major buyer's order slips",
-        ],
-      },
-      {
-        issue: "Raw-material price and quality volatility",
-        tags: [],
-        summary:
-          "Input costs can move significantly between quoting and purchasing, which erodes margin unless pricing includes a live-cost mechanism.",
-        revenueLeaks: [
-          "Orders quoted using outdated material prices",
-          "Emergency procurement at premium prices",
-          "Production stoppage caused by late supplier delivery",
-        ],
-      },
-      {
-        issue: "Shade, measurement and quality inconsistency",
-        tags: [],
-        summary:
-          "Orders can be rejected over shade variation, shrinkage, or measurement defects, which is costly without inline inspection and batch traceability.",
-        revenueLeaks: [
-          "Re-dyeing, reprocessing, and buyer debit notes",
-          "Product returns and marketplace penalties",
-          "Entire batches downgraded to lower-value markets",
-        ],
-      },
-    ],
-    financialMatrix: [
-      { scale: "Startup / Early Stage", revenue: "Rs. 25 lakh - Rs. 5 crore", margin: "-5% to 8%", profile: "Small apparel label, trading business, job-work unit, boutique manufacturer, or early D2C brand" },
-      { scale: "Small Scale", revenue: "Rs. 5 crore - Rs. 50 crore", margin: "3% to 10%", profile: "Local garment manufacturer, fabric processor, regional brand, small exporter, or contract manufacturer" },
-      { scale: "Medium Scale", revenue: "Rs. 50 crore - Rs. 500 crore", margin: "5% to 12%", profile: "Integrated manufacturer, established exporter, multi-state brand, or specialised technical-textile company" },
-      { scale: "Large Scale / Enterprise", revenue: "Above Rs. 500 crore", margin: "4% to 14%", profile: "Vertically integrated textile group, national fashion retailer, major exporter, or technical-textile enterprise" },
-    ],
+    },
     outlook: {
       sentence: "India's textile and apparel sector is targeting roughly US$350 billion in industry size by 2030, up from an estimated US$190 billion in FY2025-26 - an industry ambition, not a guaranteed forecast.",
       source: "IBEF",
@@ -497,22 +593,88 @@ function getIndustryKnowledge(industryKey) {
   return INDUSTRY_KNOWLEDGE[industryKey] || null;
 }
 
+// Keyword hints for inferring which segment a lead belongs to, from free
+// text like a business-category field, agent_type, or company name. Only
+// industries with a `segments` shape need an entry here.
+const SEGMENT_KEYWORDS = {
+  textile_apparel: {
+    manufacturer: ["manufactur", "production", "mill", "spinning", "weaving", "dyeing", "processing unit", "garment factory", "factory", "fabric processor", "integrated textile"],
+    wholesale_retail: ["wholesale", "trading", "distributor", "dealer", "trader", "retail", "showroom", "store", "boutique", "outlet", "supplier"],
+  },
+};
+
+function inferSegmentFromText(industryKey, text) {
+  const keywordMap = SEGMENT_KEYWORDS[industryKey];
+  if (!keywordMap || !text) return null;
+  const lower = String(text).toLowerCase();
+  for (const [segmentKey, keywords] of Object.entries(keywordMap)) {
+    if (keywords.some((kw) => lower.includes(kw))) return segmentKey;
+  }
+  return null;
+}
+
+// Resolves which segment applies to a lead: an explicit hint.segment wins
+// (manual override), then inference from hint.text, then the industry's
+// own defaultSegment. Returns null for flat (unsegmented) industries -
+// there's nothing to resolve.
+function resolveSegment(industryKey, hint) {
+  const industry = getIndustryKnowledge(industryKey);
+  if (!industry || !industry.segments) return null;
+
+  if (hint && hint.segment && industry.segments[hint.segment]) return hint.segment;
+  if (hint && hint.text) {
+    const inferred = inferSegmentFromText(industryKey, hint.text);
+    if (inferred && industry.segments[inferred]) return inferred;
+  }
+  return industry.defaultSegment || Object.keys(industry.segments)[0];
+}
+
+// Resolves an industry down to a single flat profile
+// (painPoints/currentFlowStages/financialMatrix/label), transparently
+// handling both segmented and flat industries. `hint` is only meaningful
+// for segmented industries: { segment?: explicit key, text?: free text to
+// infer from (e.g. a business-category field) }.
+function getIndustryProfile(industryKey, hint) {
+  const industry = getIndustryKnowledge(industryKey);
+  if (!industry) return null;
+
+  if (industry.segments) {
+    const segmentKey = resolveSegment(industryKey, hint);
+    const segment = segmentKey && industry.segments[segmentKey];
+    if (!segment) return null;
+    return {
+      label: `${industry.label} - ${segment.label}`,
+      currentFlowStages: segment.currentFlowStages,
+      painPoints: segment.painPoints,
+      financialMatrix: segment.financialMatrix,
+    };
+  }
+
+  // Flat (unsegmented) industry - used as-is, unchanged from before segments existed.
+  return {
+    label: industry.label,
+    currentFlowStages: industry.currentFlowStages,
+    painPoints: industry.painPoints,
+    financialMatrix: industry.financialMatrix,
+  };
+}
+
 // Picks the 1-2 pain points most relevant to what this lead is actually
 // missing (matched against the same gap categories used in the Digital
 // Presence Audit), and returns a short paragraph - not the full
 // knowledge-bank entry. Falls back to the first two pain points if nothing
 // tagged matches, so the section is never empty for a known industry.
-function getMatchedPainPoints(industryKey, missingTags) {
-  const industry = getIndustryKnowledge(industryKey);
-  if (!industry) return [];
+function getMatchedPainPoints(industryKey, missingTags, hint) {
+  const profile = getIndustryProfile(industryKey, hint);
+  if (!profile || !profile.painPoints) return [];
 
   const tagSet = new Set(missingTags || []);
-  const matched = industry.painPoints.filter((p) => p.tags.some((t) => tagSet.has(t)));
-  return (matched.length > 0 ? matched : industry.painPoints).slice(0, 2);
+  const matched = profile.painPoints.filter((p) => p.tags.some((t) => tagSet.has(t)));
+  return (matched.length > 0 ? matched : profile.painPoints).slice(0, 2);
 }
 
-function getIndustryPainPointsText(industryKey, missingTags) {
-  const chosen = getMatchedPainPoints(industryKey, missingTags);
+function getIndustryPainPointsText(industryKey, missingTags, hint) {
+  const chosen = getMatchedPainPoints(industryKey, missingTags, hint);
   if (chosen.length === 0) return null;
   return chosen.map((p) => p.summary).join(" ");
 }
@@ -520,14 +682,16 @@ function getIndustryPainPointsText(industryKey, missingTags) {
 // Returns up to 4 revenue-leak bullets: from the matched industry pain
 // points if the industry is known, otherwise the generic fallback list.
 // Always real, sourced-in-kind risk categories - never a fabricated number.
-function getRevenueLeaks(industryKey, missingTags) {
-  const chosen = getMatchedPainPoints(industryKey, missingTags);
+function getRevenueLeaks(industryKey, missingTags, hint) {
+  const chosen = getMatchedPainPoints(industryKey, missingTags, hint);
   if (chosen.length === 0) return GENERIC_REVENUE_LEAKS;
 
   const leaks = chosen.flatMap((p) => p.revenueLeaks || []);
   return leaks.length > 0 ? leaks.slice(0, 4) : GENERIC_REVENUE_LEAKS;
 }
 
+// Outlook stays industry-wide (market growth trend applies regardless of
+// segment), so this doesn't take a segment hint.
 function getIndustryOutlookLine(industryKey) {
   const industry = getIndustryKnowledge(industryKey);
   if (!industry || !industry.outlook) return null;
@@ -537,12 +701,21 @@ function getIndustryOutlookLine(industryKey) {
 // Real, industry-specific "today" flow for the before/after diagram. Falls
 // back to a generic small-business flow when the industry is unknown or
 // (as with electronics_electricals) the source doc didn't have this data.
-function getCurrentFlowStages(industryKey) {
-  const industry = getIndustryKnowledge(industryKey);
-  if (industry && industry.currentFlowStages && industry.currentFlowStages.length > 0) {
-    return industry.currentFlowStages;
+function getCurrentFlowStages(industryKey, hint) {
+  const profile = getIndustryProfile(industryKey, hint);
+  if (profile && profile.currentFlowStages && profile.currentFlowStages.length > 0) {
+    return profile.currentFlowStages;
   }
   return GENERIC_FLOW_STAGES;
+}
+
+// Human-readable label including the resolved segment (e.g. "Textile &
+// Apparel - Wholesale / Retail / Trade-Facing") for segmented industries,
+// or just the industry label for flat ones. Used in the report's "Today"
+// intro line so it reads as specific, not generic.
+function getResolvedLabel(industryKey, hint) {
+  const profile = getIndustryProfile(industryKey, hint);
+  return profile ? profile.label : null;
 }
 
 module.exports = {
@@ -550,8 +723,11 @@ module.exports = {
   GENERIC_REVENUE_LEAKS,
   GENERIC_FLOW_STAGES,
   getIndustryKnowledge,
+  getIndustryProfile,
+  resolveSegment,
   getIndustryPainPointsText,
   getRevenueLeaks,
   getIndustryOutlookLine,
   getCurrentFlowStages,
+  getResolvedLabel,
 };
