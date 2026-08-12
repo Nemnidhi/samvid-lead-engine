@@ -35,10 +35,11 @@ export default function MetaPageCheck() {
   return (
     <div className="mx-auto max-w-xl px-6 py-16">
       <h1 className="text-2xl font-semibold tracking-tight text-black dark:text-zinc-50">
-        Facebook Page Check (test)
+        Facebook Page Lookup
       </h1>
       <p className="mt-2 text-sm text-zinc-500">
-        Log in with Facebook, then search a business name to check for an existing public Page.
+        Connect your Facebook account, then search a business name to check whether it already has
+        a public Facebook Page - part of Samvid&apos;s digital-presence audit for prospective clients.
       </p>
 
       <a
