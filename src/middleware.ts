@@ -1,6 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const REVIEWER_PATHS = ["/meta-page-check", "/api/meta-page-search", "/api/auth/facebook"];
+// The Meta App Review demo flow (/meta-page-check + its API routes) is
+// deliberately NOT gated here. It bounces through facebook.com and back
+// (OAuth login, then the callback redirect), and browsers don't reliably
+// keep a cached Basic-Auth session across a round trip through a different
+// origin - it re-challenges on the way back, breaking the flow. The page
+// itself only lets a visitor connect their own Facebook account and search
+// public Pages; it never touches leads or dashboard data, so leaving it
+// ungated is safe. Meta's own reviewers may also click the live link
+// directly, and a password wall there would just add friction for them too.
 
 function checkAuth(request: NextRequest, expectedUser?: string, expectedPass?: string) {
   const authHeader = request.headers.get("authorization");
@@ -13,11 +21,7 @@ function checkAuth(request: NextRequest, expectedUser?: string, expectedPass?: s
 }
 
 export function middleware(request: NextRequest) {
-  const isReviewerPath = REVIEWER_PATHS.some((path) => request.nextUrl.pathname.startsWith(path));
-
-  const authorized = isReviewerPath
-    ? checkAuth(request, process.env.REVIEWER_USERNAME, process.env.REVIEWER_PASSWORD)
-    : checkAuth(request, process.env.DASHBOARD_USERNAME, process.env.DASHBOARD_PASSWORD);
+  const authorized = checkAuth(request, process.env.DASHBOARD_USERNAME, process.env.DASHBOARD_PASSWORD);
 
   if (authorized) {
     return NextResponse.next();
@@ -30,11 +34,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: [
-    "/dashboard/:path*",
-    "/api/leads/:path*",
-    "/meta-page-check/:path*",
-    "/api/meta-page-search/:path*",
-    "/api/auth/facebook/:path*",
-  ],
+  matcher: ["/dashboard/:path*", "/api/leads/:path*"],
 };
