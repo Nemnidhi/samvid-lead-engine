@@ -38,18 +38,13 @@ export default function MetaPageCheck() {
         Facebook Page Lookup
       </h1>
       <p className="mt-2 text-sm text-zinc-500">
-        Connect your Facebook account, then search a business name to check whether it already has
-        a public Facebook Page - part of Samvid&apos;s digital-presence audit for prospective clients.
+        Search a business name to check whether it already has a public Facebook Page - part of
+        Samvid&apos;s digital-presence audit for prospective clients. This calls the Meta Graph
+        API server-to-server with the app&apos;s own App Access Token (no visitor login involved,
+        since Page Public Metadata Access is an app-level feature, not a per-user permission).
       </p>
 
-      <a
-        href="/api/auth/facebook/start"
-        className="mt-4 inline-block rounded bg-[#1877F2] px-4 py-2 text-sm font-medium text-white"
-      >
-        Connect with Facebook
-      </a>
-
-      <div className="mt-6 flex gap-2">
+      <div className="mt-4 flex gap-2">
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
