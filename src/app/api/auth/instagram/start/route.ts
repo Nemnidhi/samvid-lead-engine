@@ -9,10 +9,14 @@ import { NextRequest, NextResponse } from "next/server";
 // "querying identity" that /api/instagram-discovery looks up other public
 // accounts from.
 //
-// Scope choice not yet verified live - Meta's Instagram permission names have
-// been through multiple renames. Correct the scope string here based on
-// whatever error (if any) the callback actually gets back from Meta.
-const SCOPES = "pages_show_list,pages_read_engagement,instagram_basic,instagram_manage_insights";
+// Confirmed against this app's own "Instagram API > API setup with Facebook
+// login" dashboard page (developers.facebook.com), which lists the actual
+// valid scopes for this app rather than Meta's general (and stale/renamed)
+// docs - instagram_manage_insights, guessed originally, isn't offered there
+// at all and errored live as "Invalid Scopes". These four are the scopes
+// common to both listed use cases (content management and messaging) minus
+// the publish/messaging-specific ones this app doesn't need.
+const SCOPES = "pages_show_list,pages_read_engagement,instagram_basic,business_management";
 
 export async function GET(request: NextRequest) {
   const redirectUri = `${request.nextUrl.origin}/api/auth/instagram/callback`;
