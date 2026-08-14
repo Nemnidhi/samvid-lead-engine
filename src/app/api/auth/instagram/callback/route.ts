@@ -31,11 +31,32 @@ export async function GET(request: NextRequest) {
     );
   }
 
+  // Exchange for a long-lived user token (~60 days) before deriving the Page
+  // token - the short-lived token from the step above expires in ~1 hour,
+  // useless for a persistent cron job (Vega's enrich-leads.ts). A Page token
+  // derived from a long-lived user token effectively doesn't expire on its
+  // own as long as the connection isn't revoked.
+  const exchangeParams = new URLSearchParams({
+    grant_type: "fb_exchange_token",
+    client_id: process.env.FACEBOOK_APP_ID || "",
+    client_secret: process.env.FACEBOOK_APP_SECRET || "",
+    fb_exchange_token: tokenData.access_token,
+  });
+  const exchangeRes = await fetch(`https://graph.facebook.com/v22.0/oauth/access_token?${exchangeParams.toString()}`);
+  const exchangeData = await exchangeRes.json();
+
+  if (!exchangeRes.ok || !exchangeData.access_token) {
+    const message = exchangeData.error?.message || "long_lived_exchange_failed";
+    return NextResponse.redirect(
+      new URL(`/meta-page-check?ig_error=${encodeURIComponent(message)}`, request.url)
+    );
+  }
+
   // Find a Page this user manages that has an Instagram Professional account
   // connected - expected to be the Nemnidhi Page (nemnidhi.official).
   const accountsParams = new URLSearchParams({
     fields: "id,name,access_token,instagram_business_account{id,username}",
-    access_token: tokenData.access_token,
+    access_token: exchangeData.access_token,
   });
   const accountsRes = await fetch(`https://graph.facebook.com/v22.0/me/accounts?${accountsParams.toString()}`);
   const accountsData = await accountsRes.json();
@@ -66,7 +87,7 @@ export async function GET(request: NextRequest) {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax" as const,
-    maxAge: 60 * 60,
+    maxAge: 60 * 60 * 24 * 60, // ~60 days, matching the long-lived token's real lifetime
     path: "/",
   };
   response.cookies.set("ig_page_access_token", pageWithIg.access_token, cookieOptions);

@@ -41,12 +41,21 @@ export default function MetaPageCheck() {
   const [discovery, setDiscovery] = useState<DiscoveryResult | null>(null);
   const [discoveryError, setDiscoveryError] = useState<string | null>(null);
   const [discoveryLoading, setDiscoveryLoading] = useState(false);
+  const [credentials, setCredentials] = useState<{ accountId: string; accessToken: string } | null>(null);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get("ig_connected")) setIgConnected(true);
     if (params.get("ig_error")) setIgError(params.get("ig_error"));
   }, []);
+
+  useEffect(() => {
+    if (!igConnected) return;
+    fetch("/api/instagram-discovery/credentials")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => data && setCredentials(data))
+      .catch(() => {});
+  }, [igConnected]);
 
   const handleSearch = async () => {
     setLoading(true);
@@ -248,6 +257,19 @@ export default function MetaPageCheck() {
               {discoveryLoading ? "Looking up..." : "Look Up"}
             </button>
           </div>
+
+          {credentials && (
+            <div className="mt-4 rounded border border-zinc-200 p-3 text-xs dark:border-zinc-800">
+              <p className="text-zinc-500">
+                Long-lived credentials for Vega&apos;s production check (
+                <code>check-meta-presence.ts</code>) - copy these into{" "}
+                <code>D:\Vega-main\.env.local</code> (and later, production env):
+              </p>
+              <pre className="mt-2 overflow-x-auto rounded bg-zinc-100 p-2 dark:bg-zinc-900">
+                {`INSTAGRAM_DISCOVERY_ACCOUNT_ID=${credentials.accountId}\nINSTAGRAM_DISCOVERY_ACCESS_TOKEN=${credentials.accessToken}`}
+              </pre>
+            </div>
+          )}
         </>
       )}
 
