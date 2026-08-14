@@ -9,14 +9,17 @@ import { NextRequest, NextResponse } from "next/server";
 // "querying identity" that /api/instagram-discovery looks up other public
 // accounts from.
 //
-// Confirmed against this app's own "Instagram API > API setup with Facebook
-// login" dashboard page (developers.facebook.com), which lists the actual
-// valid scopes for this app rather than Meta's general (and stale/renamed)
-// docs - instagram_manage_insights, guessed originally, isn't offered there
-// at all and errored live as "Invalid Scopes". These four are the scopes
-// common to both listed use cases (content management and messaging) minus
-// the publish/messaging-specific ones this app doesn't need.
-const SCOPES = "pages_show_list,pages_read_engagement,instagram_basic,business_management";
+// Confirmed against this app's own "Instagram API > Permissions and
+// features" dashboard page (developers.facebook.com): instagram_basic,
+// pages_show_list, pages_read_engagement, and business_management get the
+// connect step (finding Nemnidhi's linked Instagram account) working, but
+// business_discovery itself needs instagram_manage_insights specifically -
+// its own description there says "Your app can also discover and read the
+// profile" of other Instagram accounts. Requesting it in OAuth requires it
+// to first be added to the app's permission set via that dashboard page
+// ("+Add to App Review"), or Facebook rejects the whole scope as invalid.
+const SCOPES =
+  "pages_show_list,pages_read_engagement,instagram_basic,instagram_manage_insights,business_management";
 
 export async function GET(request: NextRequest) {
   const redirectUri = `${request.nextUrl.origin}/api/auth/instagram/callback`;
